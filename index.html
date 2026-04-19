@@ -52,23 +52,28 @@
         .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; }
         .stage {
             text-align: center; background-color: #334155; color: white; padding: 15px 0;
-            width: 788px; border-radius: 4px; font-weight: bold; letter-spacing: 3px; font-size: 1.2rem;
+            width: 820px; border-radius: 4px; font-weight: bold; letter-spacing: 3px; font-size: 1.2rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 40px;
         }
         
         .grid { display: grid; gap: 4px; margin: 0 auto; justify-content: center; width: max-content;}
         
+        /* Modifikasi ukuran dan teks kursi agar muat 3 baris */
         .seat {
-            width: 40px; height: 40px; border: 1px solid var(--border-color); border-radius: 6px;
+            width: 42px; height: 52px; border: 1px solid var(--border-color); border-radius: 6px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; background-color: var(--seat-empty); font-size: 0.55rem; text-align: center;
+            cursor: pointer; background-color: var(--seat-empty); text-align: center;
             transition: all 0.2s; position: relative; overflow: hidden; box-sizing: border-box;
+            padding: 1px;
         }
         .seat.empty-space { background-color: transparent; border: none; cursor: default; }
         .seat:not(.empty-space):hover { border-color: var(--primary); border-width: 2px; }
         .seat.filled { border: none; color: white; cursor: pointer; }
-        .seat-id { font-weight: bold; font-size: 0.7rem; margin-bottom: 1px; }
-        .seat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 95%; font-size: 0.5rem;}
+        
+        /* Penataan 3 baris teks di dalam kursi */
+        .seat-id { font-weight: bold; font-size: 0.65rem; margin-bottom: 1px; line-height: 1;}
+        .seat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.55rem; line-height: 1.1; font-weight: 600;}
+        .seat-category { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.45rem; line-height: 1.1; opacity: 0.9;}
         
         .cat-lansia { background-color: #f59e0b !important; }
         .cat-minus { background-color: #ef4444 !important; }
@@ -95,7 +100,7 @@
 
         <h2 style="margin-top: 15px;">2. Antrean Tamu (<span id="count-unseated">0</span>)</h2>
         <div class="guest-list" id="unseatedList">
-            </div>
+        </div>
 
         <div class="export-controls">
             <label for="exportCategoryFilter">3. Ekspor Data Undangan</label>
@@ -110,7 +115,7 @@
         <div class="venue-layout">
             <div class="stage">LAYAR / PANGGUNG UTAMA</div>
             <div class="grid" id="seatingGrid">
-                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -157,7 +162,8 @@
                     seatDiv.className = 'seat';
                     seatDiv.id = `seat-${seatId}`;
                     seatDiv.dataset.seat = seatId;
-                    seatDiv.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div>`;
+                    // Format awal dengan 3 baris (Kategori masih kosong)
+                    seatDiv.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div><div class="seat-category"></div>`;
                     seatDiv.onclick = () => handleSeatClick(seatId);
                 } else {
                     seatDiv.className = 'seat empty-space'; 
@@ -200,7 +206,7 @@
         selectedGuestId = null;
         generateCustomGrid(); 
         renderGuestList();
-        updateExportDropdown(); // Update filter dropdown
+        updateExportDropdown();
     }
 
     function renderGuestList() {
@@ -231,16 +237,13 @@
         return 'cat-default';
     }
 
-    // Fungsi baru untuk memperbarui isi Dropdown Filter Kategori
     function updateExportDropdown() {
         const filterSelect = document.getElementById('exportCategoryFilter');
         const currentSelection = filterSelect.value;
         
-        // Ambil semua kategori dari tamu yang sudah ditempatkan
         const seatedGuests = guests.filter(g => g.seat !== null);
         const uniqueCategories = [...new Set(seatedGuests.map(g => g.category))].sort();
 
-        // Buat ulang opsi dropdown
         filterSelect.innerHTML = '<option value="all">Semua Kategori</option>';
         uniqueCategories.forEach(cat => {
             const option = document.createElement('option');
@@ -249,7 +252,6 @@
             filterSelect.appendChild(option);
         });
 
-        // Kembalikan pilihan sebelumnya jika masih ada di daftar
         if (uniqueCategories.includes(currentSelection)) {
             filterSelect.value = currentSelection;
         }
@@ -262,9 +264,10 @@
         if (existingGuestIndex !== -1) {
             guests[existingGuestIndex].seat = null;
             seatElement.className = 'seat';
-            seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div>`;
+            // Mengembalikan ke 3 baris kosong
+            seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div><div class="seat-category"></div>`;
             renderGuestList();
-            updateExportDropdown(); // Update filter dropdown
+            updateExportDropdown();
             return;
         }
 
@@ -276,11 +279,12 @@
             const catClass = getCategoryClass(guest.category);
             
             seatElement.className = `seat filled ${catClass}`;
-            seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name" title="${guest.name}">${guest.name}</div>`;
+            // Memasukkan Nama dan Kategori ke dalam kursi
+            seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name" title="${guest.name}">${guest.name}</div><div class="seat-category" title="${guest.category}">${guest.category}</div>`;
             
             selectedGuestId = null;
             renderGuestList();
-            updateExportDropdown(); // Update filter dropdown
+            updateExportDropdown();
         }
     }
 
@@ -292,7 +296,6 @@
             return;
         }
 
-        // Ambil nilai filter
         const filterValue = document.getElementById('exportCategoryFilter').value;
         if (filterValue !== 'all') {
             seatedGuests = seatedGuests.filter(g => g.category === filterValue);
@@ -305,8 +308,6 @@
 
         seatedGuests.sort((a, b) => a.seat.localeCompare(b.seat, undefined, {numeric: true}));
 
-        // PENTING: Gunakan titik koma (;) untuk memisahkan kolom agar terbaca rapi di Excel versi Indonesia.
-        // PENTING: Gunakan BOM (\uFEFF) agar Excel membaca file sebagai UTF-8 yang benar.
         let csvContent = "\uFEFF"; 
         csvContent += "Nomor Kursi;Nama Tamu;Kategori\n";
 
@@ -316,13 +317,11 @@
             csvContent += `${g.seat};${safeName};${safeCategory}\n`;
         });
 
-        // Buat file Blob untuk diunduh (Lebih stabil untuk file Excel)
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
         
-        // Buat nama file dinamis berdasarkan filter
         const fileName = filterValue === 'all' ? "Data_Kursi_Semua.csv" : `Data_Kursi_${filterValue.replace(/ /g, '_')}.csv`;
         link.setAttribute("download", fileName);
         
