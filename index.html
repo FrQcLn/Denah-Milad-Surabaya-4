@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Tempat Duduk - Denah Melebar</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -37,8 +38,13 @@
             border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; margin-top: 10px;
         }
         button:hover { background-color: #1d4ed8; }
+        
         .btn-export { background-color: #16a34a; margin-top: 5px; margin-bottom: 0;}
         .btn-export:hover { background-color: #15803d; }
+        
+        /* Tombol Baru untuk Ekspor Gambar */
+        .btn-export-img { background-color: #f59e0b; margin-top: 10px; margin-bottom: 0;}
+        .btn-export-img:hover { background-color: #d97706; }
         
         .guest-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; max-height: 350px; }
         .guest-item {
@@ -49,7 +55,7 @@
         .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; background-color: #e2e8f0; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis;}
         
         .seating-area { overflow-x: auto; padding-bottom: 20px; }
-        .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; }
+        .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; background-color: white; border-radius: 8px;}
         .stage {
             text-align: center; background-color: #334155; color: white; padding: 15px 0;
             width: 820px; border-radius: 4px; font-weight: bold; letter-spacing: 3px; font-size: 1.2rem;
@@ -58,7 +64,6 @@
         
         .grid { display: grid; gap: 4px; margin: 0 auto; justify-content: center; width: max-content;}
         
-        /* Modifikasi ukuran dan teks kursi agar muat 3 baris */
         .seat {
             width: 42px; height: 52px; border: 1px solid var(--border-color); border-radius: 6px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -70,7 +75,6 @@
         .seat:not(.empty-space):hover { border-color: var(--primary); border-width: 2px; }
         .seat.filled { border: none; color: white; cursor: pointer; }
         
-        /* Penataan 3 baris teks di dalam kursi */
         .seat-id { font-weight: bold; font-size: 0.65rem; margin-bottom: 1px; line-height: 1;}
         .seat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.55rem; line-height: 1.1; font-weight: 600;}
         .seat-category { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.45rem; line-height: 1.1; opacity: 0.9;}
@@ -107,12 +111,13 @@
             <select id="exportCategoryFilter">
                 <option value="all">Semua Kategori</option>
             </select>
-            <button class="btn-export" onclick="exportCSV()">Unduh Data (Excel/CSV)</button>
+            <button class="btn-export" onclick="exportCSV()">Unduh Data Excel (CSV)</button>
+            <button class="btn-export-img" onclick="downloadImage()" id="btnDownloadImg">Unduh Visual Denah (PNG)</button>
         </div>
     </div>
 
     <div class="panel seating-area">
-        <div class="venue-layout">
+        <div class="venue-layout" id="captureArea">
             <div class="stage">LAYAR / PANGGUNG UTAMA</div>
             <div class="grid" id="seatingGrid">
             </div>
@@ -162,7 +167,6 @@
                     seatDiv.className = 'seat';
                     seatDiv.id = `seat-${seatId}`;
                     seatDiv.dataset.seat = seatId;
-                    // Format awal dengan 3 baris (Kategori masih kosong)
                     seatDiv.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div><div class="seat-category"></div>`;
                     seatDiv.onclick = () => handleSeatClick(seatId);
                 } else {
@@ -264,7 +268,6 @@
         if (existingGuestIndex !== -1) {
             guests[existingGuestIndex].seat = null;
             seatElement.className = 'seat';
-            // Mengembalikan ke 3 baris kosong
             seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div><div class="seat-category"></div>`;
             renderGuestList();
             updateExportDropdown();
@@ -279,7 +282,6 @@
             const catClass = getCategoryClass(guest.category);
             
             seatElement.className = `seat filled ${catClass}`;
-            // Memasukkan Nama dan Kategori ke dalam kursi
             seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name" title="${guest.name}">${guest.name}</div><div class="seat-category" title="${guest.category}">${guest.category}</div>`;
             
             selectedGuestId = null;
@@ -328,6 +330,42 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    // Fungsi Baru untuk Mengunduh Gambar Denah
+    function downloadImage() {
+        const captureArea = document.getElementById('captureArea');
+        const btnDownload = document.getElementById('btnDownloadImg');
+        
+        // Ubah teks tombol saat proses berjalan
+        btnDownload.innerText = "Memproses Gambar...";
+        btnDownload.style.backgroundColor = "#9ca3af"; 
+        
+        // Sedikit styling tambahan sebelum di-capture agar gambarnya rapi
+        captureArea.style.padding = "30px";
+        captureArea.style.border = "1px solid #e2e8f0";
+
+        html2canvas(captureArea, {
+            scale: 2, // Resolusi tinggi agar teks tidak pecah
+            backgroundColor: "#ffffff" // Pastikan background putih, bukan transparan
+        }).then(canvas => {
+            // Kembalikan style
+            captureArea.style.padding = "0px";
+            captureArea.style.border = "none";
+            btnDownload.innerText = "Unduh Visual Denah (PNG)";
+            btnDownload.style.backgroundColor = "#f59e0b";
+            
+            // Buat link download otomatis
+            const link = document.createElement('a');
+            link.download = 'Visual_Denah_Acara.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error("Gagal membuat gambar:", err);
+            alert("Maaf, terjadi kesalahan saat mengekspor gambar.");
+            btnDownload.innerText = "Unduh Visual Denah (PNG)";
+            btnDownload.style.backgroundColor = "#f59e0b";
+        });
     }
 
     window.onload = () => {
