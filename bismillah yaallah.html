@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Tempat Duduk - Denah Melebar</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-color: #f8fafc;
+            --border-color: #cbd5e1;
+            --seat-empty: #e2e8f0;
+            --seat-selected: #bfdbfe;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #334155;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
+        }
+        h2 { font-size: 1.1rem; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+        textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-family: monospace; white-space: pre; overflow-wrap: normal; overflow-x: auto;}
+        button {
+            background-color: var(--primary); color: white; border: none; padding: 10px 15px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; margin-top: 10px;
+        }
+        button:hover { background-color: #1d4ed8; }
+        .btn-export { background-color: #16a34a; margin-top: 5px; margin-bottom: 0;}
+        .btn-export:hover { background-color: #15803d; }
+        
+        .guest-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; max-height: 350px; }
+        .guest-item {
+            padding: 8px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;
+        }
+        .guest-item:hover { background-color: #f8fafc; }
+        .guest-item.active { background-color: var(--seat-selected); border-left: 4px solid var(--primary); }
+        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; background-color: #e2e8f0; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis;}
+        
+        .seating-area { overflow-x: auto; padding-bottom: 20px; }
+        .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; }
+        .stage {
+            text-align: center; background-color: #334155; color: white; padding: 15px 0;
+            width: 788px; border-radius: 4px; font-weight: bold; letter-spacing: 3px; font-size: 1.2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 40px;
+        }
+        
+        .grid { display: grid; gap: 4px; margin: 0 auto; justify-content: center; width: max-content;}
+        
+        .seat {
+            width: 40px; height: 40px; border: 1px solid var(--border-color); border-radius: 6px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; background-color: var(--seat-empty); font-size: 0.55rem; text-align: center;
+            transition: all 0.2s; position: relative; overflow: hidden; box-sizing: border-box;
+        }
+        .seat.empty-space { background-color: transparent; border: none; cursor: default; }
+        .seat:not(.empty-space):hover { border-color: var(--primary); border-width: 2px; }
+        .seat.filled { border: none; color: white; cursor: pointer; }
+        .seat-id { font-weight: bold; font-size: 0.7rem; margin-bottom: 1px; }
+        .seat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 95%; font-size: 0.5rem;}
+        
+        .cat-lansia { background-color: #f59e0b !important; }
+        .cat-minus { background-color: #ef4444 !important; }
+        .cat-vip { background-color: #8b5cf6 !important; }
+        .cat-umum { background-color: #3b82f6 !important; }
+        .cat-default { background-color: #10b981 !important; }
+
+        .info-box { background: #e0f2fe; padding: 10px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 15px; color: #0369a1;}
+        .export-controls { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color); }
+        .export-controls label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; }
+        .export-controls select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="panel">
+        <h2>1. Data Tamu</h2>
+        <div class="info-box">
+            💡 <b>Tips:</b> Langsung <i>Copy</i> dari Excel/Spreadsheet (Kolom 1: Nama, Kolom 2: Kategori) lalu <i>Paste</i> ke sini. Sistem otomatis mengenali spasinya.
+        </div>
+        <textarea id="guestInput" rows="5" placeholder="Budi&#9;Pelajar 10&#10;Siti&#9;Mhs 16&#10;Andi&#9;VIP"></textarea>
+        <button onclick="loadGuests()">Muat Data Tamu</button>
+
+        <h2 style="margin-top: 15px;">2. Antrean Tamu (<span id="count-unseated">0</span>)</h2>
+        <div class="guest-list" id="unseatedList">
+            </div>
+
+        <div class="export-controls">
+            <label for="exportCategoryFilter">3. Ekspor Data Undangan</label>
+            <select id="exportCategoryFilter">
+                <option value="all">Semua Kategori</option>
+            </select>
+            <button class="btn-export" onclick="exportCSV()">Unduh Data (Excel/CSV)</button>
+        </div>
+    </div>
+
+    <div class="panel seating-area">
+        <div class="venue-layout">
+            <div class="stage">LAYAR / PANGGUNG UTAMA</div>
+            <div class="grid" id="seatingGrid">
+                </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let guests = [];
+    let selectedGuestId = null;
+
+    const MAX_ROWS = 10;
+    const MAX_COLS = 38;
+
+    function getRowLetter(index) {
+        let letter = '';
+        while (index >= 0) {
+            letter = String.fromCharCode((index % 26) + 65) + letter;
+            index = Math.floor(index / 26) - 1;
+        }
+        return letter;
+    }
+
+    function isSeat(r, c) {
+        if (c >= 0 && c <= 3 && r < 8) return true;
+        if (c >= 5 && c <= 8 && r < 8) return true;
+        if (c >= 10 && c <= 17 && r < 10) return true;
+        if (c >= 20 && c <= 27 && r < 10) return true;
+        if (c >= 29 && c <= 32 && r < 8) return true;
+        if (c >= 34 && c <= 37 && r < 8) return true;
+        return false; 
+    }
+
+    function generateCustomGrid() {
+        const grid = document.getElementById('seatingGrid');
+        grid.style.gridTemplateColumns = `repeat(${MAX_COLS}, 1fr)`;
+        grid.innerHTML = '';
+
+        for (let r = 0; r < MAX_ROWS; r++) {
+            const rowLetter = getRowLetter(r);
+            for (let c = 0; c < MAX_COLS; c++) {
+                const colNum = c + 1; 
+                const seatId = `${rowLetter}${colNum}`;
+                const seatDiv = document.createElement('div');
+                
+                if (isSeat(r, c)) {
+                    seatDiv.className = 'seat';
+                    seatDiv.id = `seat-${seatId}`;
+                    seatDiv.dataset.seat = seatId;
+                    seatDiv.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div>`;
+                    seatDiv.onclick = () => handleSeatClick(seatId);
+                } else {
+                    seatDiv.className = 'seat empty-space'; 
+                }
+                grid.appendChild(seatDiv);
+            }
+        }
+    }
+
+    function loadGuests() {
+        const inputText = document.getElementById('guestInput').value;
+        const lines = inputText.split('\n').filter(line => line.trim() !== '');
+        
+        guests = lines.map((line, index) => {
+            let name = line;
+            let category = 'Umum';
+
+            if (line.includes('\t')) {
+                const parts = line.split('\t');
+                name = parts[0].trim();
+                category = parts[1] ? parts[1].trim() : 'Umum';
+            } 
+            else if (line.includes(',')) {
+                const parts = line.split(',');
+                name = parts[0].trim();
+                category = parts[1] ? parts[1].trim() : 'Umum';
+            } 
+            else {
+                name = line.trim();
+            }
+
+            return {
+                id: 'guest_' + Date.now() + '_' + index,
+                name: name,
+                category: category,
+                seat: null
+            };
+        });
+        
+        selectedGuestId = null;
+        generateCustomGrid(); 
+        renderGuestList();
+        updateExportDropdown(); // Update filter dropdown
+    }
+
+    function renderGuestList() {
+        const list = document.getElementById('unseatedList');
+        list.innerHTML = '';
+        
+        const unseated = guests.filter(g => g.seat === null);
+        document.getElementById('count-unseated').innerText = unseated.length;
+        
+        unseated.forEach(guest => {
+            const div = document.createElement('div');
+            div.className = `guest-item ${guest.id === selectedGuestId ? 'active' : ''}`;
+            div.innerHTML = `<span>${guest.name}</span> <span class="badge">${guest.category}</span>`;
+            div.onclick = () => {
+                selectedGuestId = guest.id;
+                renderGuestList();
+            };
+            list.appendChild(div);
+        });
+    }
+
+    function getCategoryClass(category) {
+        const cat = category.toLowerCase();
+        if (cat.includes('lansia') || cat.includes('tua')) return 'cat-lansia';
+        if (cat.includes('minus')) return 'cat-minus';
+        if (cat.includes('vip')) return 'cat-vip';
+        if (cat.includes('umum')) return 'cat-umum';
+        return 'cat-default';
+    }
+
+    // Fungsi baru untuk memperbarui isi Dropdown Filter Kategori
+    function updateExportDropdown() {
+        const filterSelect = document.getElementById('exportCategoryFilter');
+        const currentSelection = filterSelect.value;
+        
+        // Ambil semua kategori dari tamu yang sudah ditempatkan
+        const seatedGuests = guests.filter(g => g.seat !== null);
+        const uniqueCategories = [...new Set(seatedGuests.map(g => g.category))].sort();
+
+        // Buat ulang opsi dropdown
+        filterSelect.innerHTML = '<option value="all">Semua Kategori</option>';
+        uniqueCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            filterSelect.appendChild(option);
+        });
+
+        // Kembalikan pilihan sebelumnya jika masih ada di daftar
+        if (uniqueCategories.includes(currentSelection)) {
+            filterSelect.value = currentSelection;
+        }
+    }
+
+    function handleSeatClick(seatId) {
+        const seatElement = document.getElementById(`seat-${seatId}`);
+        const existingGuestIndex = guests.findIndex(g => g.seat === seatId);
+
+        if (existingGuestIndex !== -1) {
+            guests[existingGuestIndex].seat = null;
+            seatElement.className = 'seat';
+            seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div>`;
+            renderGuestList();
+            updateExportDropdown(); // Update filter dropdown
+            return;
+        }
+
+        if (selectedGuestId && existingGuestIndex === -1) {
+            const guestIndex = guests.findIndex(g => g.id === selectedGuestId);
+            guests[guestIndex].seat = seatId;
+            
+            const guest = guests[guestIndex];
+            const catClass = getCategoryClass(guest.category);
+            
+            seatElement.className = `seat filled ${catClass}`;
+            seatElement.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name" title="${guest.name}">${guest.name}</div>`;
+            
+            selectedGuestId = null;
+            renderGuestList();
+            updateExportDropdown(); // Update filter dropdown
+        }
+    }
+
+    function exportCSV() {
+        let seatedGuests = guests.filter(g => g.seat !== null);
+        
+        if (seatedGuests.length === 0) {
+            alert("Belum ada tamu yang ditempatkan di kursi!");
+            return;
+        }
+
+        // Ambil nilai filter
+        const filterValue = document.getElementById('exportCategoryFilter').value;
+        if (filterValue !== 'all') {
+            seatedGuests = seatedGuests.filter(g => g.category === filterValue);
+        }
+
+        if (seatedGuests.length === 0) {
+            alert("Tidak ada tamu di kategori ini yang sudah mendapat kursi.");
+            return;
+        }
+
+        seatedGuests.sort((a, b) => a.seat.localeCompare(b.seat, undefined, {numeric: true}));
+
+        // PENTING: Gunakan titik koma (;) untuk memisahkan kolom agar terbaca rapi di Excel versi Indonesia.
+        // PENTING: Gunakan BOM (\uFEFF) agar Excel membaca file sebagai UTF-8 yang benar.
+        let csvContent = "\uFEFF"; 
+        csvContent += "Nomor Kursi;Nama Tamu;Kategori\n";
+
+        seatedGuests.forEach(g => {
+            const safeName = `"${g.name.replace(/"/g, '""')}"`;
+            const safeCategory = `"${g.category.replace(/"/g, '""')}"`;
+            csvContent += `${g.seat};${safeName};${safeCategory}\n`;
+        });
+
+        // Buat file Blob untuk diunduh (Lebih stabil untuk file Excel)
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        
+        // Buat nama file dinamis berdasarkan filter
+        const fileName = filterValue === 'all' ? "Data_Kursi_Semua.csv" : `Data_Kursi_${filterValue.replace(/ /g, '_')}.csv`;
+        link.setAttribute("download", fileName);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.onload = () => {
+        generateCustomGrid();
+    }
+</script>
+</body>
+</html>
