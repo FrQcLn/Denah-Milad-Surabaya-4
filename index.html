@@ -113,10 +113,10 @@
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-const firebaseConfig = {
+    const firebaseConfig = {
         apiKey: "AIzaSyAAc5qy_hRHqJxlH8GmY423btWUX9Girds",
         authDomain: "frqcln.firebaseapp.com",
-        databaseURL: "https://frqcln-default-rtdb.firebaseio.com", // <-- TAMBAHKAN BARIS INI
+        databaseURL: "https://frqcln-default-rtdb.firebaseio.com",
         projectId: "frqcln",
         storageBucket: "frqcln.firebasestorage.app",
         messagingSenderId: "450802454979",
@@ -162,7 +162,7 @@ const firebaseConfig = {
             setTimeout(() => { indicator.innerText = ""; }, 2000);
         })
         .catch((error) => {
-            alert("GAGAL MENYIMPAN KE CLOUD!\nKemungkinan Database belum dibuat atau Aturan (Rules) Firebase masih terkunci.\n\nPesan Asli: " + error.message);
+            alert("GAGAL MENYIMPAN KE CLOUD!\nPesan Asli: " + error.message);
         });
     }
 
@@ -170,10 +170,20 @@ const firebaseConfig = {
         const dbRef = ref(db, 'seatingData');
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
-            guests = data ? data : [];
+            if (data) {
+                // PERBAIKAN: Tangani perubahan array ke object oleh Firebase
+                guests = Array.isArray(data) ? data : Object.values(data);
+                // PERBAIKAN: Pastikan format "seat" aman (String, bukan null)
+                guests = guests.map(g => {
+                    if (!g.seat) g.seat = ""; 
+                    return g;
+                });
+            } else {
+                guests = [];
+            }
             updateUIAfterChange();
         }, (error) => {
-            alert("GAGAL MEMBACA DATA DARI CLOUD!\nSilakan cek Aturan (Rules) Database Anda.\nPesan Error: " + error.message);
+            alert("GAGAL MEMBACA DATA DARI CLOUD!\nPesan Error: " + error.message);
         });
     }
 
@@ -206,7 +216,7 @@ const firebaseConfig = {
     function updateUIAfterChange() {
         generateCustomGrid(); 
         guests.forEach(g => {
-            if(g.seat) {
+            if(g.seat && g.seat !== "") { // PERBAIKAN: Hanya render jika ada nomor kursi
                 const seatElement = document.getElementById(`seat-${g.seat}`);
                 if(seatElement) {
                     const catClass = getCategoryClass(g.category);
@@ -229,14 +239,14 @@ const firebaseConfig = {
             if (line.includes('\t')) { const parts = line.split('\t'); name = parts[0].trim(); category = parts[1] ? parts[1].trim() : 'Umum'; } 
             else if (line.includes(',')) { const parts = line.split(','); name = parts[0].trim(); category = parts[1] ? parts[1].trim() : 'Umum'; } 
             else { name = line.trim(); }
-            return { id: 'guest_' + Date.now() + '_' + index, name: name, category: category, seat: null };
+            // PERBAIKAN: Gunakan string kosong ("") bukan null
+            return { id: 'guest_' + Date.now() + '_' + index, name: name, category: category, seat: "" };
         });
         
         guests = guests.concat(newGuests);
         document.getElementById('guestInput').value = ''; 
         selectedGuestId = null;
         
-        // PENTING: Update layar langsung sebelum menunggu Firebase
         updateUIAfterChange();
         syncToCloud();
     };
@@ -246,7 +256,8 @@ const firebaseConfig = {
         const existingGuestIndex = guests.findIndex(g => g.seat === seatId);
 
         if (existingGuestIndex !== -1) {
-            guests[existingGuestIndex].seat = null;
+            // PERBAIKAN: Kembalikan menjadi string kosong
+            guests[existingGuestIndex].seat = ""; 
             selectedGuestId = null;
             updateUIAfterChange();
             syncToCloud(); 
@@ -265,7 +276,8 @@ const firebaseConfig = {
     function renderGuestList() {
         const list = document.getElementById('unseatedList');
         list.innerHTML = '';
-        const unseated = guests.filter(g => g.seat === null);
+        // PERBAIKAN: Cari yang kursinya kosong / tidak valid
+        const unseated = guests.filter(g => !g.seat || g.seat === "");
         document.getElementById('count-unseated').innerText = unseated.length;
         unseated.forEach(guest => {
             const div = document.createElement('div');
@@ -288,7 +300,8 @@ const firebaseConfig = {
     function updateExportDropdown() {
         const filterSelect = document.getElementById('exportCategoryFilter');
         const currentSelection = filterSelect.value;
-        const seatedGuests = guests.filter(g => g.seat !== null);
+        // PERBAIKAN: Cari yang memiliki kursi saja
+        const seatedGuests = guests.filter(g => g.seat && g.seat !== "");
         const uniqueCategories = [...new Set(seatedGuests.map(g => g.category))].sort();
 
         filterSelect.innerHTML = '<option value="all">Semua Kategori</option>';
@@ -308,7 +321,7 @@ const firebaseConfig = {
     };
 
     window.doExportCSV = () => {
-        let seatedGuests = guests.filter(g => g.seat !== null);
+        let seatedGuests = guests.filter(g => g.seat && g.seat !== "");
         if (seatedGuests.length === 0) { alert("Belum ada tamu di kursi!"); return; }
         const filterValue = document.getElementById('exportCategoryFilter').value;
         if (filterValue !== 'all') { seatedGuests = seatedGuests.filter(g => g.category === filterValue); }
