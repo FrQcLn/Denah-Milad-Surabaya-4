@@ -113,9 +113,10 @@
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-    const firebaseConfig = {
+const firebaseConfig = {
         apiKey: "AIzaSyAAc5qy_hRHqJxlH8GmY423btWUX9Girds",
         authDomain: "frqcln.firebaseapp.com",
+        databaseURL: "https://frqcln-default-rtdb.firebaseio.com", // <-- TAMBAHKAN BARIS INI
         projectId: "frqcln",
         storageBucket: "frqcln.firebasestorage.app",
         messagingSenderId: "450802454979",
