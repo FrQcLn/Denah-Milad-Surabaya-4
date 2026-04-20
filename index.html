@@ -9,14 +9,13 @@
         :root { --primary: #2563eb; --bg-color: #f8fafc; --border-color: #cbd5e1; --seat-empty: #e2e8f0; --seat-selected: #bfdbfe; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #334155; }
         
-        /* OVERLAY LOGIN */
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; }
         .login-box { background: white; padding: 30px; border-radius: 8px; width: 300px; text-align: center; color: #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .login-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
         .login-box button { background: var(--primary); color: white; width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 5px; min-height: 15px; }
 
-        .container { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 20px; display: none; } /* Disembunyikan sampai login */
+        .container { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 20px; display: none; }
         @media (max-width: 850px) { .container { grid-template-columns: 1fr; } .panel { padding: 15px; } }
 
         .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
@@ -110,12 +109,10 @@
 </div>
 
 <script type="module">
-    // 1. Import Firebase SDK (Sesuai Versi Anda)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
 
-    // 2. Konfigurasi Anda
     const firebaseConfig = {
         apiKey: "AIzaSyAAc5qy_hRHqJxlH8GmY423btWUX9Girds",
         authDomain: "frqcln.firebaseapp.com",
@@ -126,7 +123,6 @@
         measurementId: "G-TT6WRECBB5"
     };
 
-    // 3. Inisialisasi
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
@@ -136,12 +132,11 @@
     const MAX_ROWS = 10;
     const MAX_COLS = 38;
 
-    // --- LOGIKA AUTENTIKASI ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainContainer').style.display = 'grid';
-            listenToCloud(); // Mulai dengarkan database
+            listenToCloud(); 
         } else {
             document.getElementById('loginOverlay').style.display = 'flex';
             document.getElementById('mainContainer').style.display = 'none';
@@ -152,20 +147,21 @@
         const email = document.getElementById('emailInput').value;
         const pass = document.getElementById('passInput').value;
         const errorDiv = document.getElementById('loginError');
-        
-        signInWithEmailAndPassword(auth, email, pass)
-            .catch((error) => { errorDiv.innerText = "Gagal: Email/Password salah."; });
+        signInWithEmailAndPassword(auth, email, pass).catch((error) => { errorDiv.innerText = "Gagal: Email/Password salah."; });
     };
 
     window.handleLogout = () => { signOut(auth); };
 
-    // --- LOGIKA DATABASE CLOUD ---
     function syncToCloud() {
         const dbRef = ref(db, 'seatingData');
-        set(dbRef, guests).then(() => {
+        set(dbRef, guests)
+        .then(() => {
             const indicator = document.getElementById('saveIndicator');
             indicator.innerText = "✓ Tersinkronisasi ke Cloud";
             setTimeout(() => { indicator.innerText = ""; }, 2000);
+        })
+        .catch((error) => {
+            alert("GAGAL MENYIMPAN KE CLOUD!\nKemungkinan Database belum dibuat atau Aturan (Rules) Firebase masih terkunci.\n\nPesan Asli: " + error.message);
         });
     }
 
@@ -174,25 +170,12 @@
         onValue(dbRef, (snapshot) => {
             const data = snapshot.val();
             guests = data ? data : [];
-            generateCustomGrid(); 
-            
-            // Render tamu di kursi masing-masing
-            guests.forEach(g => {
-                if(g.seat) {
-                    const seatElement = document.getElementById(`seat-${g.seat}`);
-                    if(seatElement) {
-                        const catClass = getCategoryClass(g.category);
-                        seatElement.className = `seat filled ${catClass}`;
-                        seatElement.innerHTML = `<div class="seat-id">${g.seat}</div><div class="seat-name" title="${g.name}">${g.name}</div><div class="seat-category" title="${g.category}">${g.category}</div>`;
-                    }
-                }
-            });
-            renderGuestList();
-            updateExportDropdown();
+            updateUIAfterChange();
+        }, (error) => {
+            alert("GAGAL MEMBACA DATA DARI CLOUD!\nSilakan cek Aturan (Rules) Database Anda.\nPesan Error: " + error.message);
         });
     }
 
-    // --- LOGIKA APLIKASI UTAMA ---
     function getRowLetter(index) { let letter = ''; while (index >= 0) { letter = String.fromCharCode((index % 26) + 65) + letter; index = Math.floor(index / 26) - 1; } return letter; }
     function isSeat(r, c) {
         if (c >= 0 && c <= 3 && r < 8) return true; if (c >= 5 && c <= 8 && r < 8) return true;
@@ -219,6 +202,22 @@
         }
     }
 
+    function updateUIAfterChange() {
+        generateCustomGrid(); 
+        guests.forEach(g => {
+            if(g.seat) {
+                const seatElement = document.getElementById(`seat-${g.seat}`);
+                if(seatElement) {
+                    const catClass = getCategoryClass(g.category);
+                    seatElement.className = `seat filled ${catClass}`;
+                    seatElement.innerHTML = `<div class="seat-id">${g.seat}</div><div class="seat-name" title="${g.name}">${g.name}</div><div class="seat-category" title="${g.category}">${g.category}</div>`;
+                }
+            }
+        });
+        renderGuestList();
+        updateExportDropdown();
+    }
+
     window.handleAddGuests = () => {
         const inputText = document.getElementById('guestInput').value;
         const lines = inputText.split('\n').filter(line => line.trim() !== '');
@@ -235,7 +234,10 @@
         guests = guests.concat(newGuests);
         document.getElementById('guestInput').value = ''; 
         selectedGuestId = null;
-        syncToCloud(); // Simpan ke Firebase
+        
+        // PENTING: Update layar langsung sebelum menunggu Firebase
+        updateUIAfterChange();
+        syncToCloud();
     };
 
     window.handleSeatClick = (seatId) => {
@@ -245,7 +247,8 @@
         if (existingGuestIndex !== -1) {
             guests[existingGuestIndex].seat = null;
             selectedGuestId = null;
-            syncToCloud(); // Simpan ke Firebase
+            updateUIAfterChange();
+            syncToCloud(); 
             return;
         }
 
@@ -253,7 +256,8 @@
             const guestIndex = guests.findIndex(g => g.id === selectedGuestId);
             guests[guestIndex].seat = seatId;
             selectedGuestId = null;
-            syncToCloud(); // Simpan ke Firebase
+            updateUIAfterChange();
+            syncToCloud(); 
         }
     };
 
@@ -297,6 +301,7 @@
     window.handleClearData = () => {
         if(confirm("AWAS: Hapus SEMUA data Cloud? Tim lain juga akan kehilangan data ini.")) {
             guests = [];
+            updateUIAfterChange();
             syncToCloud();
         }
     };
@@ -333,7 +338,6 @@
         });
     };
     
-    // Generate grid awal saat web dimuat
     generateCustomGrid();
 </script>
 </body>
