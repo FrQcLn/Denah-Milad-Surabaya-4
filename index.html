@@ -3,17 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Tempat Duduk - Denah Melebar</title>
+    <title>Denah Milad SBY 4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --primary: #2563eb; --bg-color: #f8fafc; --border-color: #cbd5e1; --seat-empty: #e2e8f0; --seat-selected: #bfdbfe; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #334155; }
         
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; }
-        .login-box { background: white; padding: 30px; border-radius: 8px; width: 300px; text-align: center; color: #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        /* OVERLAY 1: PILIH PERAN */
+        #roleOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; }
+        .role-title { font-size: 2.2rem; margin-bottom: 10px; font-weight: 800; letter-spacing: 0.5px; line-height: 1.3; padding: 0 20px;}
+        .role-subtitle { font-size: 1.1rem; color: #94a3b8; margin-bottom: 40px; font-style: italic;}
+        .role-buttons { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+        .btn-role { background: white; color: #0f172a; padding: 20px 40px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; border: none; transition: transform 0.2s; min-width: 200px;}
+        .btn-role:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.3); }
+        .btn-role.peserta { background: var(--primary); color: white; }
+        .btn-role.peserta:hover { background: #1d4ed8; }
+
+        @media (max-width: 600px) { .role-title { font-size: 1.6rem; } }
+
+        /* OVERLAY 2: LOGIN PANITIA */
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 9999; display: none; justify-content: center; align-items: center; color: white; }
+        .login-box { background: white; padding: 30px; border-radius: 8px; width: 300px; text-align: center; color: #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative;}
         .login-box input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
-        .login-box button { background: var(--primary); color: white; width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .login-box button { background: var(--primary); color: white; width: 100%; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px;}
+        .btn-back { background: transparent !important; color: #64748b !important; text-decoration: underline; margin-top: 5px !important; }
         .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 5px; min-height: 15px; }
+
+        /* KONTROL DISPLAY BERDASARKAN PERAN */
+        .panitia-only { display: none; } 
+        .peserta-only { display: none; } 
 
         .container { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 20px; display: none; }
         @media (max-width: 850px) { .container { grid-template-columns: 1fr; } .panel { padding: 15px; } }
@@ -27,7 +45,8 @@
         .btn-export { background-color: #16a34a; margin-top: 5px; margin-bottom: 0;}
         .btn-export-img { background-color: #f59e0b; margin-top: 10px; margin-bottom: 0;}
         .btn-danger { background-color: #ef4444; margin-top: 10px;}
-        .btn-logout { background-color: #64748b; padding: 5px 10px; font-size: 0.8rem; width: auto; margin: 0; }
+        .btn-logout { background-color: #ef4444; padding: 5px 10px; font-size: 0.8rem; width: auto; margin: 0; }
+        .btn-logout:hover { background-color: #dc2626; }
         
         .guest-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; max-height: 300px; }
         .guest-item { padding: 8px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
@@ -37,322 +56,4 @@
         
         .seating-area { overflow-x: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
         .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; background-color: white; border-radius: 8px; padding-top: 10px;}
-        .stage { text-align: center; background-color: #334155; color: white; padding: 15px 0; min-width: 820px; width: 100%; border-radius: 4px; font-weight: bold; letter-spacing: 3px; font-size: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 40px; }
-        
-        .grid { display: grid; gap: 4px; margin: 0 auto; justify-content: center; width: max-content;}
-        .seat { width: 42px; height: 52px; border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; background-color: var(--seat-empty); text-align: center; transition: all 0.2s; position: relative; overflow: hidden; box-sizing: border-box; padding: 1px; }
-        .seat.empty-space { background-color: transparent; border: none; cursor: default; }
-        .seat:not(.empty-space):hover { border-color: var(--primary); border-width: 2px; }
-        .seat.filled { border: none; color: white; cursor: pointer; }
-        
-        .seat-id { font-weight: bold; font-size: 0.65rem; margin-bottom: 1px; line-height: 1;}
-        .seat-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.55rem; line-height: 1.1; font-weight: 600;}
-        .seat-category { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; font-size: 0.45rem; line-height: 1.1; opacity: 0.9;}
-        
-        .cat-lansia { background-color: #f59e0b !important; } .cat-minus { background-color: #ef4444 !important; } .cat-vip { background-color: #8b5cf6 !important; } .cat-umum { background-color: #3b82f6 !important; } .cat-default { background-color: #10b981 !important; }
-
-        .info-box { background: #e0f2fe; padding: 10px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 15px; color: #0369a1;}
-        .save-status { font-size: 0.75rem; color: #16a34a; font-weight: bold; text-align: center; margin-top: 5px; height: 15px;}
-        .status-dot { display: inline-block; width: 8px; height: 8px; background-color: #16a34a; border-radius: 50%; margin-right: 5px; animation: blink 2s infinite;}
-        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.4;} 100% {opacity: 1;} }
-        
-        .export-controls { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color); }
-        .export-controls label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; }
-        .export-controls select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
-
-<div id="loginOverlay">
-    <div class="login-box">
-        <h3>Akses Panitia</h3>
-        <p style="font-size: 0.8rem; color: #64748b;">Silakan login untuk mengakses denah</p>
-        <input type="email" id="emailInput" placeholder="Email Firebase Anda">
-        <input type="password" id="passInput" placeholder="Password Firebase Anda">
-        <button onclick="handleLogin()">Masuk (Login)</button>
-        <div id="loginError" class="error-msg"></div>
-    </div>
-</div>
-
-<div class="container" id="mainContainer">
-    <div class="panel">
-        <h2>
-            Data Tamu 
-            <button class="btn-logout" onclick="handleLogout()">Keluar</button>
-        </h2>
-        <div class="info-box">
-            <span class="status-dot"></span><b>Tersambung ke Cloud (Real-time)</b><br>
-            Perubahan yang Anda buat otomatis terlihat oleh tim lain.
-        </div>
-        <textarea id="guestInput" rows="5" placeholder="Budi&#9;Pelajar 10&#10;Siti&#9;Mhs 16"></textarea>
-        <button onclick="handleAddGuests()">Tambahkan Data Tamu</button>
-        <div id="saveIndicator" class="save-status"></div>
-
-        <h2 style="margin-top: 10px;">2. Antrean Tamu (<span id="count-unseated">0</span>)</h2>
-        <div class="guest-list" id="unseatedList"></div>
-
-        <div class="export-controls">
-            <label>3. Ekspor & Unduh</label>
-            <select id="exportCategoryFilter"><option value="all">Semua Kategori</option></select>
-            <button class="btn-export" onclick="doExportCSV()">Unduh Data Excel (CSV)</button>
-            <button class="btn-export-img" onclick="doDownloadImage()" id="btnDownloadImg">Unduh Visual Denah (PNG)</button>
-            <button class="btn-danger" onclick="handleClearData()">Hapus Semua Data Cloud</button>
-        </div>
-    </div>
-
-    <div class="panel seating-area">
-        <div class="venue-layout" id="captureArea">
-            <div class="stage">LAYAR / PANGGUNG UTAMA</div>
-            <div class="grid" id="seatingGrid"></div>
-        </div>
-    </div>
-</div>
-
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyAAc5qy_hRHqJxlH8GmY423btWUX9Girds",
-        authDomain: "frqcln.firebaseapp.com",
-        databaseURL: "https://frqcln-default-rtdb.firebaseio.com",
-        projectId: "frqcln",
-        storageBucket: "frqcln.firebasestorage.app",
-        messagingSenderId: "450802454979",
-        appId: "1:450802454979:web:b69da55c551939de25ed76",
-        measurementId: "G-TT6WRECBB5"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-
-    let guests = [];
-    let selectedGuestId = null;
-    const MAX_ROWS = 10;
-    const MAX_COLS = 38;
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('mainContainer').style.display = 'grid';
-            listenToCloud(); 
-        } else {
-            document.getElementById('loginOverlay').style.display = 'flex';
-            document.getElementById('mainContainer').style.display = 'none';
-        }
-    });
-
-    window.handleLogin = () => {
-        const email = document.getElementById('emailInput').value;
-        const pass = document.getElementById('passInput').value;
-        const errorDiv = document.getElementById('loginError');
-        signInWithEmailAndPassword(auth, email, pass).catch((error) => { errorDiv.innerText = "Gagal: Email/Password salah."; });
-    };
-
-    window.handleLogout = () => { signOut(auth); };
-
-    function syncToCloud() {
-        const dbRef = ref(db, 'seatingData');
-        set(dbRef, guests)
-        .then(() => {
-            const indicator = document.getElementById('saveIndicator');
-            indicator.innerText = "✓ Tersinkronisasi ke Cloud";
-            setTimeout(() => { indicator.innerText = ""; }, 2000);
-        })
-        .catch((error) => {
-            alert("GAGAL MENYIMPAN KE CLOUD!\nPesan Asli: " + error.message);
-        });
-    }
-
-    function listenToCloud() {
-        const dbRef = ref(db, 'seatingData');
-        onValue(dbRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                // PERBAIKAN: Tangani perubahan array ke object oleh Firebase
-                guests = Array.isArray(data) ? data : Object.values(data);
-                // PERBAIKAN: Pastikan format "seat" aman (String, bukan null)
-                guests = guests.map(g => {
-                    if (!g.seat) g.seat = ""; 
-                    return g;
-                });
-            } else {
-                guests = [];
-            }
-            updateUIAfterChange();
-        }, (error) => {
-            alert("GAGAL MEMBACA DATA DARI CLOUD!\nPesan Error: " + error.message);
-        });
-    }
-
-    function getRowLetter(index) { let letter = ''; while (index >= 0) { letter = String.fromCharCode((index % 26) + 65) + letter; index = Math.floor(index / 26) - 1; } return letter; }
-    function isSeat(r, c) {
-        if (c >= 0 && c <= 3 && r < 8) return true; if (c >= 5 && c <= 8 && r < 8) return true;
-        if (c >= 10 && c <= 17 && r < 10) return true; if (c >= 20 && c <= 27 && r < 10) return true;
-        if (c >= 29 && c <= 32 && r < 8) return true; if (c >= 34 && c <= 37 && r < 8) return true; return false; 
-    }
-
-    function generateCustomGrid() {
-        const grid = document.getElementById('seatingGrid');
-        grid.style.gridTemplateColumns = `repeat(${MAX_COLS}, 1fr)`;
-        grid.innerHTML = '';
-        for (let r = 0; r < MAX_ROWS; r++) {
-            const rowLetter = getRowLetter(r);
-            for (let c = 0; c < MAX_COLS; c++) {
-                const colNum = c + 1; const seatId = `${rowLetter}${colNum}`;
-                const seatDiv = document.createElement('div');
-                if (isSeat(r, c)) {
-                    seatDiv.className = 'seat'; seatDiv.id = `seat-${seatId}`; seatDiv.dataset.seat = seatId;
-                    seatDiv.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div><div class="seat-category"></div>`;
-                    seatDiv.onclick = () => window.handleSeatClick(seatId);
-                } else { seatDiv.className = 'seat empty-space'; }
-                grid.appendChild(seatDiv);
-            }
-        }
-    }
-
-    function updateUIAfterChange() {
-        generateCustomGrid(); 
-        guests.forEach(g => {
-            if(g.seat && g.seat !== "") { // PERBAIKAN: Hanya render jika ada nomor kursi
-                const seatElement = document.getElementById(`seat-${g.seat}`);
-                if(seatElement) {
-                    const catClass = getCategoryClass(g.category);
-                    seatElement.className = `seat filled ${catClass}`;
-                    seatElement.innerHTML = `<div class="seat-id">${g.seat}</div><div class="seat-name" title="${g.name}">${g.name}</div><div class="seat-category" title="${g.category}">${g.category}</div>`;
-                }
-            }
-        });
-        renderGuestList();
-        updateExportDropdown();
-    }
-
-    window.handleAddGuests = () => {
-        const inputText = document.getElementById('guestInput').value;
-        const lines = inputText.split('\n').filter(line => line.trim() !== '');
-        if(lines.length === 0) return;
-
-        const newGuests = lines.map((line, index) => {
-            let name = line; let category = 'Umum';
-            if (line.includes('\t')) { const parts = line.split('\t'); name = parts[0].trim(); category = parts[1] ? parts[1].trim() : 'Umum'; } 
-            else if (line.includes(',')) { const parts = line.split(','); name = parts[0].trim(); category = parts[1] ? parts[1].trim() : 'Umum'; } 
-            else { name = line.trim(); }
-            // PERBAIKAN: Gunakan string kosong ("") bukan null
-            return { id: 'guest_' + Date.now() + '_' + index, name: name, category: category, seat: "" };
-        });
-        
-        guests = guests.concat(newGuests);
-        document.getElementById('guestInput').value = ''; 
-        selectedGuestId = null;
-        
-        updateUIAfterChange();
-        syncToCloud();
-    };
-
-    window.handleSeatClick = (seatId) => {
-        const seatElement = document.getElementById(`seat-${seatId}`);
-        const existingGuestIndex = guests.findIndex(g => g.seat === seatId);
-
-        if (existingGuestIndex !== -1) {
-            // PERBAIKAN: Kembalikan menjadi string kosong
-            guests[existingGuestIndex].seat = ""; 
-            selectedGuestId = null;
-            updateUIAfterChange();
-            syncToCloud(); 
-            return;
-        }
-
-        if (selectedGuestId && existingGuestIndex === -1) {
-            const guestIndex = guests.findIndex(g => g.id === selectedGuestId);
-            guests[guestIndex].seat = seatId;
-            selectedGuestId = null;
-            updateUIAfterChange();
-            syncToCloud(); 
-        }
-    };
-
-    function renderGuestList() {
-        const list = document.getElementById('unseatedList');
-        list.innerHTML = '';
-        // PERBAIKAN: Cari yang kursinya kosong / tidak valid
-        const unseated = guests.filter(g => !g.seat || g.seat === "");
-        document.getElementById('count-unseated').innerText = unseated.length;
-        unseated.forEach(guest => {
-            const div = document.createElement('div');
-            div.className = `guest-item ${guest.id === selectedGuestId ? 'active' : ''}`;
-            div.innerHTML = `<span>${guest.name}</span> <span class="badge">${guest.category}</span>`;
-            div.onclick = () => { selectedGuestId = guest.id; renderGuestList(); };
-            list.appendChild(div);
-        });
-    }
-
-    function getCategoryClass(category) {
-        const cat = category.toLowerCase();
-        if (cat.includes('lansia') || cat.includes('tua')) return 'cat-lansia';
-        if (cat.includes('minus')) return 'cat-minus';
-        if (cat.includes('vip')) return 'cat-vip';
-        if (cat.includes('umum')) return 'cat-umum';
-        return 'cat-default';
-    }
-
-    function updateExportDropdown() {
-        const filterSelect = document.getElementById('exportCategoryFilter');
-        const currentSelection = filterSelect.value;
-        // PERBAIKAN: Cari yang memiliki kursi saja
-        const seatedGuests = guests.filter(g => g.seat && g.seat !== "");
-        const uniqueCategories = [...new Set(seatedGuests.map(g => g.category))].sort();
-
-        filterSelect.innerHTML = '<option value="all">Semua Kategori</option>';
-        uniqueCategories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat; option.textContent = cat; filterSelect.appendChild(option);
-        });
-        if (uniqueCategories.includes(currentSelection)) { filterSelect.value = currentSelection; }
-    }
-
-    window.handleClearData = () => {
-        if(confirm("AWAS: Hapus SEMUA data Cloud? Tim lain juga akan kehilangan data ini.")) {
-            guests = [];
-            updateUIAfterChange();
-            syncToCloud();
-        }
-    };
-
-    window.doExportCSV = () => {
-        let seatedGuests = guests.filter(g => g.seat && g.seat !== "");
-        if (seatedGuests.length === 0) { alert("Belum ada tamu di kursi!"); return; }
-        const filterValue = document.getElementById('exportCategoryFilter').value;
-        if (filterValue !== 'all') { seatedGuests = seatedGuests.filter(g => g.category === filterValue); }
-        if (seatedGuests.length === 0) { alert("Tidak ada tamu di kategori ini."); return; }
-
-        seatedGuests.sort((a, b) => a.seat.localeCompare(b.seat, undefined, {numeric: true}));
-        let csvContent = "\uFEFFNomor Kursi;Nama Tamu;Kategori\n";
-        seatedGuests.forEach(g => {
-            const safeName = `"${g.name.replace(/"/g, '""')}"`; const safeCategory = `"${g.category.replace(/"/g, '""')}"`;
-            csvContent += `${g.seat};${safeName};${safeCategory}\n`;
-        });
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
-        link.download = filterValue === 'all' ? "Data_Kursi_Semua.csv" : `Data_Kursi_${filterValue.replace(/ /g, '_')}.csv`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    };
-
-    window.doDownloadImage = () => {
-        const captureArea = document.getElementById('captureArea');
-        const btnDownload = document.getElementById('btnDownloadImg');
-        btnDownload.innerText = "Memproses..."; btnDownload.style.backgroundColor = "#9ca3af"; 
-        captureArea.style.padding = "30px"; captureArea.style.border = "1px solid #e2e8f0";
-
-        html2canvas(captureArea, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
-            captureArea.style.padding = "10px 0 0 0"; captureArea.style.border = "none";
-            btnDownload.innerText = "Unduh Visual Denah (PNG)"; btnDownload.style.backgroundColor = "#f59e0b";
-            const link = document.createElement('a'); link.download = 'Visual_Denah_Acara.png'; link.href = canvas.toDataURL('image/png'); link.click();
-        });
-    };
-    
-    generateCustomGrid();
-</script>
-</body>
-</html>
+        .stage { text-align: center; background-color: #334155; color: white; padding: 15px 0; min-width: 820px; width: 1
