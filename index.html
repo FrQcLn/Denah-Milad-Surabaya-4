@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --primary: #2563eb; --bg-color: #f8fafc; --border-color: #cbd5e1; --seat-empty: #e2e8f0; --seat-selected: #bfdbfe; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #334155; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #334155; transition: background 0.3s ease; }
         
         /* OVERLAY 1: PILIH PERAN */
         #roleOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; }
@@ -33,14 +33,16 @@
         .panitia-only { display: none; } 
         .peserta-only { display: none; } 
 
-        /* TATA LETAK DEFAULT (Mode Panitia) */
-        .container { max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 20px; display: none; }
-        @media (max-width: 850px) { .container { grid-template-columns: 1fr; } .panel { padding: 15px; } }
+        /* TATA LETAK PANITIA (Dua Kolom) */
+        .container { max-width: 100%; margin: 0 auto; display: none; gap: 20px; }
+        @media (max-width: 850px) { .container { grid-template-columns: 1fr !important; } }
 
-        /* TATA LETAK KHUSUS PESERTA (Tanpa Denah, Fokus di Tengah) */
-        body.mode-peserta #mainContainer { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
-        body.mode-peserta .panel.sidebar-panel { width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid var(--border-color);}
-        body.mode-peserta .panel.seating-area { display: none; /* Sembunyikan Denah Secara Total */ }
+        /* TATA LETAK PESERTA (Di Tengah, Elegan) */
+        body.mode-peserta { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body.mode-peserta #mainContainer { display: flex !important; justify-content: center; align-items: center; width: 100%; padding: 20px; box-sizing: border-box; }
+        body.mode-peserta .sidebar-panel { width: 100%; max-width: 500px; padding: 40px 30px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); border: none; background: white; }
+        body.mode-peserta .seating-area { display: none; }
+        body.mode-peserta h2 { font-size: 1.4rem; color: #0f172a; border-bottom: none; margin-bottom: 5px; }
 
         .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         h2 { font-size: 1.1rem; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -51,16 +53,15 @@
         .btn-export { background-color: #16a34a; margin-top: 5px; margin-bottom: 0;}
         .btn-export-img { background-color: #f59e0b; margin-top: 10px; margin-bottom: 0;}
         .btn-danger { background-color: #ef4444; margin-top: 10px;}
-        .btn-logout { background-color: #ef4444; padding: 5px 10px; font-size: 0.8rem; width: auto; margin: 0; }
+        .btn-logout { background-color: #ef4444; padding: 6px 12px; font-size: 0.85rem; width: auto; margin: 0; border-radius: 6px; }
         .btn-logout:hover { background-color: #dc2626; }
         
         .guest-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; max-height: 300px; }
         .guest-item { padding: 8px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
         .guest-item:hover { background-color: #f8fafc; }
         .guest-item.active { background-color: var(--seat-selected); border-left: 4px solid var(--primary); }
-        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; background-color: #e2e8f0; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis;}
+        .badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; background-color: #e2e8f0; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis;}
         
-        /* Area Denah (Panitia) */
         .seating-area { overflow-x: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
         .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; background-color: white; border-radius: 8px; padding-top: 10px;}
         .stage { text-align: center; background-color: #334155; color: white; padding: 15px 0; min-width: 820px; width: 100%; border-radius: 4px; font-weight: bold; letter-spacing: 3px; font-size: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 40px; }
@@ -90,17 +91,23 @@
         .export-controls select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; }
 
         /* Tampilan Pencarian Peserta Baru */
-        .search-box { display: flex; gap: 8px; margin-bottom: 15px; }
-        .search-box input { flex-grow: 1; padding: 12px; border: 2px solid #cbd5e1; border-radius: 6px; font-size: 1.05rem; transition: border-color 0.2s; }
+        .search-box { display: flex; gap: 8px; margin-bottom: 20px; margin-top: 10px;}
+        .search-box input { flex-grow: 1; padding: 14px 15px; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; transition: border-color 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);}
         .search-box input:focus { border-color: var(--primary); outline: none; }
-        .search-result { background: #f8fafc; border-radius: 8px; text-align: center; display: none; }
+        .search-box button { width: auto; margin: 0; padding: 0 25px; border-radius: 8px; font-size: 1.05rem;}
+        
+        .search-result { background: transparent; border-radius: 8px; text-align: center; display: none; }
         
         /* Kartu Hasil Pencarian */
-        .result-card { background: white; border: 2px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 12px; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .result-card h3 { margin: 0 0 5px 0; color: var(--primary); font-size: 1.3rem; }
-        .result-card p { margin: 0; font-size: 0.9rem; color: #64748b; }
-        .result-seat { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
-        .result-seat-number { font-size: 1.8rem; font-weight: 900; color: #10b981; }
+        .result-card { background: white; border: 2px solid var(--primary); padding: 20px; border-radius: 12px; margin-bottom: 12px; text-align: left; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1); }
+        .result-card h3 { margin: 0 0 8px 0; color: var(--primary); font-size: 1.5rem; }
+        .result-card p { margin: 0; font-size: 1rem; color: #64748b; display: flex; align-items: center; gap: 8px;}
+        .result-seat { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .result-seat-label { font-size: 1.1rem; color: #475569; font-weight: 600;}
+        .result-seat-number { font-size: 2.2rem; font-weight: 900; color: #10b981; background: #ecfdf5; padding: 5px 15px; border-radius: 8px;}
+        
+        .seat-highlight { border: 3px solid #10b981 !important; transform: scale(1.15); z-index: 10; box-shadow: 0 0 15px rgba(16, 185, 129, 0.8); animation: pulseSeat 1.5s infinite; }
+        @keyframes pulseSeat { 0% {box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);} 70% {box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);} 100% {box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);} }
     </style>
 </head>
 <body id="bodyMain">
@@ -131,17 +138,17 @@
         
         <h2>
             <span class="panitia-only">Manajemen Denah</span>
-            <span class="peserta-only">Cek Tempat Duduk</span>
+            <span class="peserta-only">Halo, Selamat Datang! 👋</span>
             <button class="btn-logout" onclick="handleLogout()">Kembali</button>
         </h2>
 
         <div class="peserta-only">
-            <p style="font-size: 0.95rem; color: #475569; margin-top: -5px; margin-bottom: 20px;">
-                Selamat datang! Silakan ketik nama Anda untuk mengetahui di mana kursi Anda berada.
+            <p style="font-size: 1rem; color: #475569; margin-top: 5px; margin-bottom: 10px; line-height: 1.5;">
+                Silakan ketik nama Anda di bawah ini untuk mengetahui lokasi tempat duduk Anda.
             </p>
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Ketik nama (misal: Budi)..." onkeyup="if(event.key === 'Enter') searchPeserta()">
-                <button style="width: auto; margin: 0; padding: 0 20px;" onclick="searchPeserta()">Cari</button>
+                <button onclick="searchPeserta()">Cari</button>
             </div>
             <div id="searchResult" class="search-result">
                 </div>
@@ -214,7 +221,6 @@
             document.getElementById('loginOverlay').style.display = 'flex';
         } else if (role === 'peserta') {
             setupRoleUI();
-            document.getElementById('mainContainer').style.display = 'grid'; // Grid akan di-override flex di CSS
             listenToCloud(); 
         }
     };
@@ -230,25 +236,29 @@
         const panitiaElements = document.querySelectorAll('.panitia-only');
         const pesertaElements = document.querySelectorAll('.peserta-only');
         const bodyMain = document.getElementById('bodyMain');
+        const mainContainer = document.getElementById('mainContainer');
 
         if (currentRole === 'panitia') {
             panitiaElements.forEach(el => el.style.display = 'block');
             pesertaElements.forEach(el => el.style.display = 'none');
             bodyMain.classList.add('mode-panitia');
             bodyMain.classList.remove('mode-peserta');
+            mainContainer.style.display = 'grid'; // Layout 2 kolom untuk panitia
+            mainContainer.style.gridTemplateColumns = '320px 1fr';
+            generateCustomGrid(); 
         } else {
             panitiaElements.forEach(el => el.style.display = 'none');
             pesertaElements.forEach(el => el.style.display = 'block');
             bodyMain.classList.remove('mode-panitia');
             bodyMain.classList.add('mode-peserta');
+            mainContainer.style.display = ''; // Dikosongkan agar flexbox dari CSS yang bekerja
+            mainContainer.style.gridTemplateColumns = '';
         }
-        if(currentRole === 'panitia') generateCustomGrid(); 
     }
 
     onAuthStateChanged(auth, (user) => {
         if (user && currentRole === 'panitia') {
             document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('mainContainer').style.display = 'grid';
             setupRoleUI();
             listenToCloud(); 
         }
@@ -293,35 +303,31 @@
         return matrix[b.length][a.length];
     }
 
-    // LOGIKA PENCARIAN PESERTA (Toleransi Typo)
     window.searchPeserta = () => {
         const query = document.getElementById('searchInput').value.toLowerCase().trim();
         const resultDiv = document.getElementById('searchResult');
         
+        document.querySelectorAll('.seat-highlight').forEach(el => el.classList.remove('seat-highlight'));
+
         if(query.length < 3) {
             resultDiv.style.display = 'block';
-            resultDiv.innerHTML = `<p style="color:#f59e0b; padding:10px;">Mohon ketik minimal 3 huruf dari nama Anda.</p>`;
+            resultDiv.innerHTML = `<p style="color:#f59e0b; padding:10px; background: white; border-radius: 8px;">Mohon ketik minimal 3 huruf dari nama Anda.</p>`;
             return;
         }
 
-        // 1. Ambil semua tamu yang SUDAH punya kursi
         const seatedGuests = guests.filter(g => g.seat && g.seat !== "");
         let matchedGuests = [];
 
-        // 2. Tahap Pertama: Cari yang persis / mengandung kata (misal: cari "cesy", jika ada nama yang benar-benar "cesy")
         matchedGuests = seatedGuests.filter(g => g.name.toLowerCase().includes(query));
 
-        // 3. Tahap Kedua (Fuzzy Search): Jika tidak ada yang sama persis, gunakan deteksi Typo
         if (matchedGuests.length === 0) {
             seatedGuests.forEach(g => {
                 const nameParts = g.name.toLowerCase().split(' ');
                 const queryParts = query.split(' ');
                 
-                // Cek setiap patah kata, toleransi salah ketik 1-2 huruf
                 let isMatch = false;
                 for (let nPart of nameParts) {
                     for (let qPart of queryParts) {
-                        // Jika panjang kata > 4 huruf, boleh salah 2 huruf. Jika pendek, boleh salah 1 huruf.
                         const tolerance = Math.max(1, Math.floor(qPart.length / 3)); 
                         if (getLevenshteinDistance(nPart, qPart) <= tolerance) {
                             isMatch = true;
@@ -332,9 +338,8 @@
             });
         }
 
-        // TAMPILKAN HASIL
         if (matchedGuests.length > 0) {
-            let htmlContent = `<p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px;">Ditemukan ${matchedGuests.length} kecocokan:</p>`;
+            let htmlContent = `<p style="color: #64748b; font-size: 0.95rem; margin-bottom: 15px;">Ditemukan ${matchedGuests.length} kecocokan:</p>`;
             
             matchedGuests.forEach(match => {
                 htmlContent += `
@@ -342,7 +347,7 @@
                     <h3>${match.name}</h3>
                     <p>Kategori: <span class="badge">${match.category}</span></p>
                     <div class="result-seat">
-                        <span>Nomor Kursi:</span>
+                        <span class="result-seat-label">Nomor Kursi:</span>
                         <span class="result-seat-number">${match.seat}</span>
                     </div>
                 </div>`;
@@ -351,12 +356,21 @@
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = htmlContent;
 
+            // Jika role panitia, geser ke kursi di denah
+            if(currentRole === 'panitia' && matchedGuests.length === 1) {
+                const targetSeat = document.getElementById(`seat-${matchedGuests[0].seat}`);
+                if(targetSeat) {
+                    targetSeat.classList.add('seat-highlight');
+                    targetSeat.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                }
+            }
+
         } else {
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = `
-                <div style="padding: 20px 10px;">
-                    <p style="color:#ef4444; font-size: 1.1rem; margin-bottom:5px;"><b>Oops, Nama tidak ditemukan!</b></p>
-                    <p style="font-size:0.9rem; color:#64748b;">Mungkin belum mendapat kursi atau coba gunakan nama panggilan lainnya.</p>
+                <div style="padding: 25px 15px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <p style="color:#ef4444; font-size: 1.2rem; margin-bottom:8px;"><b>Oops, Nama tidak ditemukan!</b></p>
+                    <p style="font-size:0.95rem; color:#64748b; line-height:1.5;">Mungkin panitia belum mengalokasikan kursi Anda, atau cobalah cari menggunakan nama panggilan yang lain.</p>
                 </div>`;
         }
     };
@@ -391,7 +405,7 @@
     }
 
     function generateCustomGrid() {
-        if(currentRole !== 'panitia') return; // Jangan habiskan memori merender denah jika bukan panitia
+        if(currentRole !== 'panitia') return; 
 
         const grid = document.getElementById('seatingGrid');
         grid.style.gridTemplateColumns = `repeat(${MAX_COLS}, 1fr)`;
@@ -427,7 +441,6 @@
             renderGuestList();
             updateExportDropdown();
         } else if (currentRole === 'peserta') {
-            // Jika ada yang sedang mencari nama, render ulang hasil pencarian secara live
             const searchInput = document.getElementById('searchInput').value;
             if (searchInput.length >= 3) {
                 window.searchPeserta(); 
