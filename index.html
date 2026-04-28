@@ -90,7 +90,6 @@
         .export-controls label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; }
         .export-controls select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; }
 
-        /* Tampilan Pencarian Peserta Baru */
         .search-box { display: flex; gap: 8px; margin-bottom: 20px; margin-top: 10px;}
         .search-box input { flex-grow: 1; padding: 14px 15px; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 1.1rem; transition: border-color 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);}
         .search-box input:focus { border-color: var(--primary); outline: none; }
@@ -98,7 +97,6 @@
         
         .search-result { background: transparent; border-radius: 8px; text-align: center; display: none; }
         
-        /* Kartu Hasil Pencarian */
         .result-card { background: white; border: 2px solid var(--primary); padding: 20px; border-radius: 12px; margin-bottom: 12px; text-align: left; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1); }
         .result-card h3 { margin: 0 0 8px 0; color: var(--primary); font-size: 1.5rem; }
         .result-card p { margin: 0; font-size: 1rem; color: #64748b; display: flex; align-items: center; gap: 8px;}
@@ -218,7 +216,14 @@
         document.getElementById('roleOverlay').style.display = 'none';
 
         if (role === 'panitia') {
-            document.getElementById('loginOverlay').style.display = 'flex';
+            // FIX BUG LOGIN: Cek apakah user sudah login sebelumnya
+            if (auth.currentUser) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                setupRoleUI();
+                listenToCloud();
+            } else {
+                document.getElementById('loginOverlay').style.display = 'flex';
+            }
         } else if (role === 'peserta') {
             setupRoleUI();
             listenToCloud(); 
@@ -243,7 +248,7 @@
             pesertaElements.forEach(el => el.style.display = 'none');
             bodyMain.classList.add('mode-panitia');
             bodyMain.classList.remove('mode-peserta');
-            mainContainer.style.display = 'grid'; // Layout 2 kolom untuk panitia
+            mainContainer.style.display = 'grid'; 
             mainContainer.style.gridTemplateColumns = '320px 1fr';
             generateCustomGrid(); 
         } else {
@@ -251,7 +256,7 @@
             pesertaElements.forEach(el => el.style.display = 'block');
             bodyMain.classList.remove('mode-panitia');
             bodyMain.classList.add('mode-peserta');
-            mainContainer.style.display = ''; // Dikosongkan agar flexbox dari CSS yang bekerja
+            mainContainer.style.display = ''; 
             mainContainer.style.gridTemplateColumns = '';
         }
     }
@@ -269,7 +274,17 @@
         const pass = document.getElementById('passInput').value;
         const errorDiv = document.getElementById('loginError');
         errorDiv.innerText = "Memproses...";
-        signInWithEmailAndPassword(auth, email, pass).catch((error) => { errorDiv.innerText = "Gagal: Email/Password salah."; });
+        
+        signInWithEmailAndPassword(auth, email, pass)
+            .then(() => {
+                // FIX BUG LOGIN: Paksa eksekusi penutupan layar jika berhasil
+                document.getElementById('loginOverlay').style.display = 'none';
+                setupRoleUI();
+                listenToCloud();
+            })
+            .catch((error) => { 
+                errorDiv.innerText = "Gagal: Email/Password salah."; 
+            });
     };
 
     window.handleLogout = () => {
@@ -284,7 +299,6 @@
         document.getElementById('bodyMain').classList.remove('mode-peserta', 'mode-panitia');
     };
 
-    // ALGORITMA LEVENSHTEIN DISTANCE (Pendeteksi Typo)
     function getLevenshteinDistance(a, b) {
         if (a.length === 0) return b.length;
         if (b.length === 0) return a.length;
@@ -356,7 +370,6 @@
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = htmlContent;
 
-            // Jika role panitia, geser ke kursi di denah
             if(currentRole === 'panitia' && matchedGuests.length === 1) {
                 const targetSeat = document.getElementById(`seat-${matchedGuests[0].seat}`);
                 if(targetSeat) {
