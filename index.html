@@ -53,14 +53,20 @@
         .btn-export { background-color: #16a34a; margin-top: 5px; margin-bottom: 0;}
         .btn-export-img { background-color: #f59e0b; margin-top: 10px; margin-bottom: 0;}
         .btn-danger { background-color: #ef4444; margin-top: 10px;}
+        .btn-warning { background-color: #f59e0b; margin-top: 0;}
+        .btn-warning:hover { background-color: #d97706; }
         .btn-logout { background-color: #ef4444; padding: 6px 12px; font-size: 0.85rem; width: auto; margin: 0; border-radius: 6px; }
         .btn-logout:hover { background-color: #dc2626; }
         
+        /* Tombol Delete Tamu Antrean */
+        .btn-delete-guest { background-color: #ef4444 !important; color: white !important; border: none !important; padding: 4px 10px !important; border-radius: 4px !important; cursor: pointer !important; font-size: 0.75rem !important; margin: 0 !important; width: auto !important; height: fit-content; transition: background-color 0.2s;}
+        .btn-delete-guest:hover { background-color: #b91c1c !important; }
+
         .guest-list { flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; max-height: 300px; }
-        .guest-item { padding: 8px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .guest-item { padding: 8px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; transition: background-color 0.2s;}
         .guest-item:hover { background-color: #f8fafc; }
         .guest-item.active { background-color: var(--seat-selected); border-left: 4px solid var(--primary); }
-        .badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; background-color: #e2e8f0; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis;}
+        .badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; background-color: #e2e8f0; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; display: inline-block;}
         
         .seating-area { overflow-x: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
         .venue-layout { display: flex; flex-direction: column; align-items: center; width: max-content; margin: 0 auto; background-color: white; border-radius: 8px; padding-top: 10px;}
@@ -161,6 +167,7 @@
             <label style="font-size: 0.85rem; font-weight: bold;">1. Tambah Data Tamu Baru</label>
             <textarea id="guestInput" rows="4" placeholder="Budi&#9;Pelajar 10&#10;Siti&#9;Mhs 16"></textarea>
             <button onclick="handleAddGuests()">Tambahkan ke Antrean</button>
+            <button class="btn-warning" onclick="handleClearQueue()">Kosongkan Antrean</button>
             <div id="saveIndicator" class="save-status"></div>
 
             <h3 style="font-size: 0.9rem; margin-top: 15px; margin-bottom: 5px;">2. Antrean Tamu (<span id="count-unseated">0</span>)</h3>
@@ -216,7 +223,6 @@
         document.getElementById('roleOverlay').style.display = 'none';
 
         if (role === 'panitia') {
-            // FIX BUG LOGIN: Cek apakah user sudah login sebelumnya
             if (auth.currentUser) {
                 document.getElementById('loginOverlay').style.display = 'none';
                 setupRoleUI();
@@ -277,7 +283,6 @@
         
         signInWithEmailAndPassword(auth, email, pass)
             .then(() => {
-                // FIX BUG LOGIN: Paksa eksekusi penutupan layar jika berhasil
                 document.getElementById('loginOverlay').style.display = 'none';
                 setupRoleUI();
                 listenToCloud();
@@ -478,6 +483,32 @@
         updateUIAfterChange(); syncToCloud();
     };
 
+    // FITUR BARU: Hapus Satu Tamu dari Antrean
+    window.handleDeleteGuest = (guestId, event) => {
+        event.stopPropagation(); // Mencegah klik masuk ke mode seleksi tamu
+        if(confirm("Hapus tamu ini dari antrean?")) {
+            guests = guests.filter(g => g.id !== guestId);
+            if(selectedGuestId === guestId) selectedGuestId = null;
+            updateUIAfterChange(); 
+            syncToCloud();
+        }
+    };
+
+    // FITUR BARU: Hapus Semua Antrean Sekaligus
+    window.handleClearQueue = () => {
+        const unseatedCount = guests.filter(g => !g.seat || g.seat === "").length;
+        if(unseatedCount === 0) {
+            alert("Antrean sudah kosong.");
+            return;
+        }
+        if(confirm(`Yakin ingin membuang ${unseatedCount} tamu yang ADA DI ANTREAN?\n\n(Tamu yang sudah duduk di denah tidak akan ikut terhapus)`)) {
+            guests = guests.filter(g => g.seat && g.seat !== ""); // Simpan hanya yang punya kursi
+            selectedGuestId = null;
+            updateUIAfterChange(); 
+            syncToCloud();
+        }
+    };
+
     window.handleSeatClick = (seatId) => {
         if(currentRole !== 'panitia') return;
         const seatElement = document.getElementById(`seat-${seatId}`);
@@ -503,7 +534,17 @@
         unseated.forEach(guest => {
             const div = document.createElement('div');
             div.className = `guest-item ${guest.id === selectedGuestId ? 'active' : ''}`;
-            div.innerHTML = `<span>${guest.name}</span> <span class="badge">${guest.category}</span>`;
+            
+            // Layout item antrean + tombol delete
+            div.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:4px; max-width:80%;">
+                    <span>${guest.name}</span> 
+                    <span class="badge">${guest.category}</span>
+                </div>
+                <button class="btn-delete-guest" onclick="handleDeleteGuest('${guest.id}', event)" title="Hapus dari antrean">✕</button>
+            `;
+            
+            // Klik area div (selain tombol silang) akan memilih peserta
             div.onclick = () => { selectedGuestId = guest.id; renderGuestList(); };
             list.appendChild(div);
         });
