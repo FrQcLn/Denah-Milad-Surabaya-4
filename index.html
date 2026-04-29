@@ -322,6 +322,47 @@
         return matrix[b.length][a.length];
     }
 
+    // --- ALGORITMA PENERJEMAH BLOK ---
+    // Fungsi ini menghitung nomor urut kursi berdasarkan posisi (r=baris, c=kolom)
+    function getNewSeatInfo(r, c) {
+        // Blok A: 32 Kursi
+        if (c >= 0 && c <= 3 && r < 8) return { block: 'A', num: (r * 4) + (c - 0) + 1 };
+        // Blok B: 32 Kursi
+        if (c >= 5 && c <= 8 && r < 8) return { block: 'B', num: (r * 4) + (c - 5) + 1 };
+        // Blok C: 80 Kursi
+        if (c >= 10 && c <= 17 && r < 10) return { block: 'C', num: (r * 8) + (c - 10) + 1 };
+        // Blok D: 80 Kursi
+        if (c >= 20 && c <= 27 && r < 10) return { block: 'D', num: (r * 8) + (c - 20) + 1 };
+        // Blok E: 32 Kursi
+        if (c >= 29 && c <= 32 && r < 8) return { block: 'E', num: (r * 4) + (c - 29) + 1 };
+        // Blok F: 32 Kursi
+        if (c >= 34 && c <= 37 && r < 8) return { block: 'F', num: (r * 4) + (c - 34) + 1 };
+        return null;
+    }
+
+    // Fungsi otomatis untuk mengamankan dan menerjemahkan data panitia yang lama
+    function convertOldSeatToNew(oldSeat) {
+        // Deteksi jika format lama (Huruf dan Angka saja, contoh: "J21")
+        const match = oldSeat.match(/^([A-Z]+)(\d+)$/);
+        if (!match) return oldSeat; // Jika sudah format baru ("A-1"), biarkan saja
+        
+        const rowLetter = match[1];
+        const colNum = parseInt(match[2], 10) - 1;
+        
+        // Ubah huruf baris menjadi indeks angka (A=0, J=9)
+        let r = 0;
+        for (let i = 0; i < rowLetter.length; i++) {
+            r = r * 26 + (rowLetter.charCodeAt(i) - 64);
+        }
+        r = r - 1; 
+        const c = colNum;
+        
+        // Terjemahkan koordinat lama ke Blok Baru
+        const info = getNewSeatInfo(r, c);
+        if (info) return `${info.block}-${info.num}`;
+        return oldSeat;
+    }
+
     window.searchPeserta = () => {
         const query = document.getElementById('searchInput').value.toLowerCase().trim();
         const resultDiv = document.getElementById('searchResult');
@@ -361,13 +402,14 @@
             let htmlContent = `<p style="color: #64748b; font-size: 0.95rem; margin-bottom: 15px;">Ditemukan ${matchedGuests.length} kecocokan:</p>`;
             
             matchedGuests.forEach(match => {
+                const displaySeat = match.seat.replace('-', ''); // Hilangkan tanda minus untuk display (e.g. "C-80" jadi "C80")
                 htmlContent += `
                 <div class="result-card">
                     <h3>${match.name}</h3>
                     <p>Kategori: <span class="badge">${match.category}</span></p>
                     <div class="result-seat">
                         <span class="result-seat-label">Nomor Kursi:</span>
-                        <span class="result-seat-number">${match.seat}</span>
+                        <span class="result-seat-number">${displaySeat}</span>
                     </div>
                 </div>`;
             });
@@ -409,17 +451,18 @@
             const data = snapshot.val();
             if (data) {
                 guests = Array.isArray(data) ? data : Object.values(data);
-                guests = guests.map(g => { if (!g.seat) g.seat = ""; return g; });
+                guests = guests.map(g => { 
+                    if (!g.seat) {
+                        g.seat = ""; 
+                    } else {
+                        // Terjemahkan data lama dari Firebase secara otomatis
+                        g.seat = convertOldSeatToNew(g.seat);
+                    }
+                    return g; 
+                });
             } else { guests = []; }
             updateUIAfterChange();
         });
-    }
-
-    function getRowLetter(index) { let letter = ''; while (index >= 0) { letter = String.fromCharCode((index % 26) + 65) + letter; index = Math.floor(index / 26) - 1; } return letter; }
-    function isSeat(r, c) {
-        if (c >= 0 && c <= 3 && r < 8) return true; if (c >= 5 && c <= 8 && r < 8) return true;
-        if (c >= 10 && c <= 17 && r < 10) return true; if (c >= 20 && c <= 27 && r < 10) return true;
-        if (c >= 29 && c <= 32 && r < 8) return true; if (c >= 34 && c <= 37 && r < 8) return true; return false; 
     }
 
     function generateCustomGrid() {
@@ -429,15 +472,22 @@
         grid.style.gridTemplateColumns = `repeat(${MAX_COLS}, 1fr)`;
         grid.innerHTML = '';
         for (let r = 0; r < MAX_ROWS; r++) {
-            const rowLetter = getRowLetter(r);
             for (let c = 0; c < MAX_COLS; c++) {
-                const colNum = c + 1; const seatId = `${rowLetter}${colNum}`;
+                const seatInfo = getNewSeatInfo(r, c);
                 const seatDiv = document.createElement('div');
-                if (isSeat(r, c)) {
-                    seatDiv.className = 'seat'; seatDiv.id = `seat-${seatId}`; seatDiv.dataset.seat = seatId;
-                    seatDiv.innerHTML = `<div class="seat-id">${seatId}</div><div class="seat-name"></div><div class="seat-category"></div>`;
+                
+                if (seatInfo) {
+                    const seatId = `${seatInfo.block}-${seatInfo.num}`; // Contoh: "C-80"
+                    const displaySeat = `${seatInfo.block}${seatInfo.num}`; // Contoh: "C80"
+                    
+                    seatDiv.className = 'seat'; 
+                    seatDiv.id = `seat-${seatId}`; 
+                    seatDiv.dataset.seat = seatId;
+                    seatDiv.innerHTML = `<div class="seat-id">${displaySeat}</div><div class="seat-name"></div><div class="seat-category"></div>`;
                     seatDiv.onclick = () => window.handleSeatClick(seatId);
-                } else { seatDiv.className = 'seat empty-space'; }
+                } else { 
+                    seatDiv.className = 'seat empty-space'; 
+                }
                 grid.appendChild(seatDiv);
             }
         }
@@ -452,7 +502,8 @@
                     if(seatElement) {
                         const catClass = getCategoryClass(g.category);
                         seatElement.className = `seat filled ${catClass}`;
-                        seatElement.innerHTML = `<div class="seat-id">${g.seat}</div><div class="seat-name" title="${g.name}">${g.name}</div><div class="seat-category" title="${g.category}">${g.category}</div>`;
+                        const displaySeat = g.seat.replace('-', '');
+                        seatElement.innerHTML = `<div class="seat-id">${displaySeat}</div><div class="seat-name" title="${g.name}">${g.name}</div><div class="seat-category" title="${g.category}">${g.category}</div>`;
                     }
                 }
             });
@@ -483,9 +534,8 @@
         updateUIAfterChange(); syncToCloud();
     };
 
-    // FITUR BARU: Hapus Satu Tamu dari Antrean
     window.handleDeleteGuest = (guestId, event) => {
-        event.stopPropagation(); // Mencegah klik masuk ke mode seleksi tamu
+        event.stopPropagation(); 
         if(confirm("Hapus tamu ini dari antrean?")) {
             guests = guests.filter(g => g.id !== guestId);
             if(selectedGuestId === guestId) selectedGuestId = null;
@@ -494,7 +544,6 @@
         }
     };
 
-    // FITUR BARU: Hapus Semua Antrean Sekaligus
     window.handleClearQueue = () => {
         const unseatedCount = guests.filter(g => !g.seat || g.seat === "").length;
         if(unseatedCount === 0) {
@@ -502,7 +551,7 @@
             return;
         }
         if(confirm(`Yakin ingin membuang ${unseatedCount} tamu yang ADA DI ANTREAN?\n\n(Tamu yang sudah duduk di denah tidak akan ikut terhapus)`)) {
-            guests = guests.filter(g => g.seat && g.seat !== ""); // Simpan hanya yang punya kursi
+            guests = guests.filter(g => g.seat && g.seat !== ""); 
             selectedGuestId = null;
             updateUIAfterChange(); 
             syncToCloud();
@@ -535,7 +584,6 @@
             const div = document.createElement('div');
             div.className = `guest-item ${guest.id === selectedGuestId ? 'active' : ''}`;
             
-            // Layout item antrean + tombol delete
             div.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:4px; max-width:80%;">
                     <span>${guest.name}</span> 
@@ -544,7 +592,6 @@
                 <button class="btn-delete-guest" onclick="handleDeleteGuest('${guest.id}', event)" title="Hapus dari antrean">✕</button>
             `;
             
-            // Klik area div (selain tombol silang) akan memilih peserta
             div.onclick = () => { selectedGuestId = guest.id; renderGuestList(); };
             list.appendChild(div);
         });
@@ -586,11 +633,14 @@
         if (filterValue !== 'all') { seatedGuests = seatedGuests.filter(g => g.category === filterValue); }
         if (seatedGuests.length === 0) { alert("Tidak ada tamu di kategori ini."); return; }
 
+        // Sortir secara numerik agar "A2" tidak berada di bawah "A10"
         seatedGuests.sort((a, b) => a.seat.localeCompare(b.seat, undefined, {numeric: true}));
+        
         let csvContent = "\uFEFFNomor Kursi;Nama Tamu;Kategori\n";
         seatedGuests.forEach(g => {
             const safeName = `"${g.name.replace(/"/g, '""')}"`; const safeCategory = `"${g.category.replace(/"/g, '""')}"`;
-            csvContent += `${g.seat};${safeName};${safeCategory}\n`;
+            const displaySeat = g.seat.replace('-', '');
+            csvContent += `${displaySeat};${safeName};${safeCategory}\n`;
         });
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
